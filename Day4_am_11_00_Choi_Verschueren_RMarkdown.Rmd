@@ -1,0 +1,289 @@
+---
+title: "Statistical analysis of proteomics experiments with R and MSstats"
+author: "Meena Choi & Erik Verschueren"
+date: "May 21, 2015"
+output: pdf_document
+---
+
+## Prerequisites
+
+We're setting the working directory to where you saved files for Day 4.
+
+```{r, eval=T}
+setwd('~/Dropbox/neucourse_may2015/Day4-Thursday-1.5hr/')
+getwd()
+```
+
+If you didn't have MSstats installed so far. Please install it now.
+
+```{r, eval=F}
+install.packages(pkgs = 'MSstats.daily_3.0.4.tar.gz', repos = NULL, type = 'source')
+```
+
+Load MSstats and verify that you have the correct version (3.0.4) loaded. 
+
+```{r, eval=T, warning=F}
+library('MSstats.daily', warn.conflicts = F, quietly = T, verbose = F)
+?MSstats.daily
+```
+
+***
+
+# SRM analysis with MSstats
+
+## 1. preparing the data for MSstats input
+
+Let's start by reading in data as it comes out of Skyline.
+
+```{r, eval=T}
+RatPlasmaData <- read.csv('../Day1-Monday-1hr/RatPlasmaMSstatsInput.csv')
+head(RatPlasmaData)
+?SRMRawData
+```
+
+The raw data (input data for MSstats) is required to contain variable of ProteinName, PeptideSequence, PrecursorCharge, FragmentIon, ProductCharge, IsotopeLabelType, Condition, BioReplicate, Run, Intensity. The variable names should be fixed. Now adapt the column scheme of the dataset so that it fits MSstats input format. We're changing `FileName` to `Run` and `Area` to `Intensity`
+
+```{r, eval=T}
+colnames(RatPlasmaData)[9] <- 'Run' 
+colnames(RatPlasmaData)[10] <- 'Intensity' 
+head(RatPlasmaData)
+```
+
+***
+
+## 2. Summarizing the data
+
+### 2.1 Normalizing and summarizing data with dataProcess
+
+```
+?dataProcess
+```
+
+#### 2.1.1 Default normalization and summarization options
+
+
+**! Always pay attention to the default options **  
+
+The default option for summarization is `linear`.
+The default option for normalization is `equalizeMedians`. However, if you have a spiked in standard then you want to set this to `globalStandards` and define the standard with `nameStandards`
+
+```{r, eval=F, message=F, warning=F}
+# `linear` is the default model-based summarization option 
+Rats.linear <- dataProcess(raw = RatPlasmaData, summaryMethod = 'linear', 
+                           normalization = 'equalizeMedians',
+                           fillIncompleteRows = TRUE, skylineReport = TRUE)
+```
+
+```{r, eval=T, echo=FALSE}
+load('Rats.linear.Rdata')
+```
+
+```{r, eval=T, echo=T}
+names(Rats.linear)
+head(Rats.linear$ProcessedData)
+head(Rats.linear$RunlevelData)
+head(Rats.linear$ModelQC)
+head(Rats.linear$SummaryMethod)
+```
+
+#### 2.1.2 Different summarization options
+
+Besides summarizing observations with linear models MSstats also offers a summarization option using Tukey-Median-Polish (TMP), which is  more robust, and as sum of log-intensities, which is the default Skyline behaviour.
+
+```{r, eval=F, message=F, warning=F}
+# Median comparsion with Tukey-Median-Polish
+Rats.TMP <- dataProcess(raw = RatPlasmaData, summaryMethod="TMP", 
+                        skylineReport=TRUE)
+# different method same output..
+names(Rats.TMP) == names(Rats.linear)
+# but since this is not model-based, no model summary
+Rats.TMP$ModelQC
+# Different summarization optinons : log-sum-intensities
+Rats.logOfSum <- dataProcess(raw = RatPlasmaData, summaryMethod="logOfSum", 
+                             skylineReport = TRUE)
+```
+
+### 2.2 Visualization of processed data
+
+#### 2.2.1 Quality control and Normalization effects
+
+Now let's look at what the equalize medians procedure did to our data. We can generate these for all proteins but also for single Proteins at a time if we have a big dataset. Let's look at the 'Kininogen-1' (Kng1/NP_036828) protein in these example data. Kng1 is upregulated as part of an anti-inflammatory response: it increases vascular permeability and doing so induces hypotension. It is postulated that Kng1 has a cardioprotective effect. As you can appreciate it is upregulated, albeit with soem variability, in many diseased Rats.   
+
+```{r, eval=F, message=F, warning=F}
+dataProcessPlots(data = Rats.linear, type="QCplot")
+```
+
+```{r, eval=F}
+MYPROTEIN = "NP_036828"
+dataProcessPlots(data = Rats.linear, type="QCplot", 
+                 which.Protein=MYPROTEIN, address="KNG1_eqmedians_")
+```
+
+
+![](/Users/everschueren/Dropbox/neucourse_may2015/Day4-Thursday-1.5hr/KNG1_eqmedians_QCPlot_1.png)
+
+![](/Users/everschueren/Dropbox/neucourse_may2015/Day4-Thursday-1.5hr/KNG1_eqmedians_QCPlot_2.png)
+
+#### 2.2.2 Summarization effects
+
+##### Profile plots  
+
+First, let's look at how the linear model summarized the data per protein. The panel left shows each peptide transition across runs, grouped per condition. Ech peptide has a different colour/type layout. The panel on the right shows the same transitions in grey, with the values as summarized by the model overlayed in red.
+
+```{r, eval=F}
+dataProcessPlots(data = Rats.linear, address="Rats_linear_", 
+                 type="Profileplot", featureName="NA", width=14, height=7)
+```
+
+![](/Users/everschueren/Dropbox/neucourse_may2015/Day4-Thursday-1.5hr/Rats_linear_ProfilePlot.png)
+
+##### Model based quality plots : quantile-quantile plots
+
+Let's inspect how well ***each*** transition is represented by the model. A transition that is modeled well will show a linear relation between the sampled points and the theoretical values (from the model)  for every quantile in the quantile-quantile plot. 
+
+***Exercise*** Inspect the PDF file that contains the quantile-quantile plot. What do you see?   
+
+```{r, eval=F}
+modelBasedQCPlots(data = Rats.linear$ModelQC, type="QQPlots", feature.QQPlot="byFeature",
+                  address="Rats_linear_")
+```
+
+![](/Users/everschueren/Dropbox/neucourse_may2015/Day4-Thursday-1.5hr/Rats_linear_QQPlot_byFeatures.png)
+
+##### Model based quality plots : residual plots  
+
+A residual plot is a graph that shows the residuals (or errors between the sampled data point and the model's prediction) on the vertical axis and the independent variable (in this case each prediction) on the horizontal axis. If the points in a residual plot are randomly dispersed around the horizontal axis, our linear model is appropriate for the data.  
+
+```{r, eval=F}
+modelBasedQCPlots(data = Rats.linear$ModelQC, type="ResidualPlots", address="Rats_linear_")
+```
+
+![](/Users/everschueren/Dropbox/neucourse_may2015/Day4-Thursday-1.5hr/Rats_linear_ResidualPlot.png)
+
+***
+
+## 3. Finding differentially abundant proteins across conditions
+
+### 3.1 Comparing conditions with groupComparison
+
+After we normalized the data and summarized each protein's behaviour across conditions with one of the dataProcess summarization methods, we are all set to compare protein changes between groups of conditions. Within MSstats we can do this with the `groupComparison` function, which takes as input the output of the `dataProcess` function. 
+
+```{r}
+?groupComparison
+```
+
+Of course we have to tell `groupComparison` which are the conditions we would like to compare...  
+You can make your `contrast.matrix` in R in a text editor or even in Excel, if you prefer. We define our contrast matrix by adding a column for every condition, **in alphabetical order**. We add a row for every comparison we would like to make between groups of conditions.  
+
+**0** is for conditions we would like to ignore.
+**1** is for conditions we would like to put in the numerator of the ratio or fold-change.
+**-1** is for conditions we would like to put in the denumerator of the ratio or fold-change.
+
+![](/Users/everschueren/Dropbox/neucourse_may2015/Day4-Thursday-1.5hr/contrast_matrix.png)
+
+
+***NOTE*** If you make a new contrast matrix save it as a text file, where you saved your script and datasets to read it into R. Make sure to remove the first tab in the matrix header of the text file (before your first condition)!  
+
+
+***QUESTION*** How would you compare a group of conditions versus another group of conditions?  
+
+```{r, eval=TRUE}
+Rats.contrasts <- read.delim(file = 'RatPlasmaData-contrasts.txt', sep='\t')
+Rats.contrasts <- as.matrix(Rats.contrasts)
+```
+
+We're ready to go! let's compare our two populations.
+
+```{r, eval=T, message=F, warning=F}
+Rats.comparisons <- groupComparison(contrast.matrix = Rats.contrasts, data=Rats.linear)
+```
+
+Let's inspect the results to see what proteins are changing significantly between Diseased and Healthy.
+
+```{r, eval=TRUE}
+names(Rats.comparisons)
+names(Rats.comparisons$ComparisonResult)
+SignificantProteins = 
+  Rats.comparisons$ComparisonResult[Rats.comparisons$ComparisonResult$adj.pvalue < 0.05 ,]
+nrow(SignificantProteins)
+SignificantProteinsUpInDiseased = SignificantProteins[SignificantProteins$log2FC > 2 ,]
+nrow(SignificantProteinsUpInDiseased)
+```
+
+### 3.2 Visualization of differentially abundant proteins
+
+```{r, eval=TRUE}
+?groupComparisonPlots
+```
+
+Volcano plots allow us to visually separate strong changes, which are not significant, from strong and significant changes. Look for these subjects in the upper right and upper left quadrants of the plot.  
+
+```{r, eval=F}
+groupComparisonPlots(data = Rats.comparisons$ComparisonResult, type = 'VolcanoPlot',
+                     sig = 0.05, FCcutoff = 2^2, address = 'Rats_linear_significant_')
+```
+
+![](/Users/everschueren/Dropbox/neucourse_may2015/Day4-Thursday-1.5hr/Rats_linear_significant_VolcanoPlot.png)
+
+## 4. save your models
+
+```{r, eval=F}
+save.image(file = 'RatPlasmaData_MSstats_models.RData')
+```
+
+## EXTRAS FOR THE ADVANCED USER!
+
+### Dealing with missing values
+
+Usually your SRM data should have very little to no missing values.. However, label-free DDA datasets have many missing values. MSstats supports a number of ways to deal with this.  
+Now, let's revisit how we processed the data with `dataProcess` and fill in missing values with the minimal value per run.  
+
+
+```{r, eval=F}
+Rats.missing.minRun <- dataProcess(raw = RatPlasmaData, cutoffCensored="minFeature", 
+                                   censoredInt="0", skylineReport=TRUE)
+```
+
+Or alternatively, we can censor missing values in the model.  
+
+
+```{r, eval=F}
+Rats.missing.censored <- dataProcess(raw = RatPlasmaData, censoredInt="0", 
+                                     summaryMethod="linear", normalization=FALSE, 
+                                     fillIncompleteRows=TRUE, skylineReport=TRUE)
+```
+
+Have a look at the profile plots to compare the two missing values options..
+
+```{r, eval=F}
+dataProcessPlots(data = Rats.missing.minRun, address="Rats_missing_minrun_", 
+                 type="Profileplot", featureName="NA", width=14, height=7)
+dataProcessPlots(data = Rats.missing.censored, address="Rats_missing_censored_", 
+                 type="Profileplot", featureName="NA", width=14, height=7)
+```
+
+
+### Planning future experimental designs
+
+```
+?designSampleSize
+```
+
+#### Designing sample size for desired fold-change or statistical power 
+
+```{r, eval=F}
+Rats.expdesign <- designSampleSize(data = Rats.comparisons$fittedmodel, 
+                                   desiredFC = c(1,1.5), FDR = 0.05, 
+                                   numSample = TRUE)
+```
+
+#### Visualizing the relationship between desired fold-change and mininum sample size number
+
+```{r, eval=F}
+pdf(file='Rats_expdesign.pdf', width=7,height=7)
+  designSampleSizePlots(data = Rats.expdesign)
+dev.off()
+```
+
+![](/Users/everschueren/Dropbox/neucourse_may2015/Day4-Thursday-1.5hr/Rats_expdesign.png)
+
