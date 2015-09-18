@@ -95,7 +95,7 @@ head(DDA2009.TMP$PredictBySurvival)
  If 'censoredInt=NULL', we assume that all intensities are randomly missing and there is no action for missing values.
  
 ```{r, eval=T}
-# default option
+# no action for missing values.
 DDA2009.TMP.random <- dataProcess(raw = DDA2009.superhirn,  fillIncompleteRows = TRUE,
                            normalization = 'equalizeMedians',
                            summaryMethod = 'TMP',
@@ -105,7 +105,7 @@ DDA2009.TMP.random <- dataProcess(raw = DDA2009.superhirn,  fillIncompleteRows =
 
 #### 2.1.2 Different summarization options
 
-Besides summarizing observations with linear models MSstats also offers a summarization option using linear model, and as sum of log-intensities, which is the default Skyline behaviour. `summaryMethod="linear"` with `censoredInt=NULL` assumes that all NAs are randomly missing and use `lm` or `lmer` for parameter estimation. `summaryMethod="linear"` with `censoredInt="NA"` assumes that NA intensities are censored, not detected because intensities are below the cutoff. Then use AFT model with left-censored for parameter estimation. 'cutoffCensored' is the same as `summaryMethod="TMP"`. For `summaryMethod="linear"`, AFT model is only used for parameter estimation, not for imputation. Therefore `MBimpute=TRUE` with `summaryMethod="linear"` doesn't work (no imputation before parameter estimation, the same with `MBimpute=FALSE`).
+Besides summarizing observations with linear models MSstats also offers a summarization option using linear model, and as sum of log-intensities, which is the default Skyline behaviour. `summaryMethod="linear"` with `censoredInt=NULL` assumes that all NAs are randomly missing and use `lm` or `lmer` for parameter estimation. `summaryMethod="linear"` with `censoredInt="NA"` assumes that NA intensities are censored, not detected because intensities are below the cutoff. Then use AFT model with left-censored for parameter estimation. (`Surv` function with left-censored and gaussian distribution from `Survival` package.) cutoffCensored' is the same as `summaryMethod="TMP"`. For `summaryMethod="linear"`, AFT model is only used for parameter estimation, not for imputation. Therefore `MBimpute=TRUE` with `summaryMethod="linear"` doesn't work (no imputation before parameter estimation, the same with `MBimpute=FALSE`).
 
 ```{r, eval=F, message=F, warning=F}
 # linear mixed model (lm or lmer) with run and feature
@@ -241,19 +241,8 @@ nrow(SignificantProteins)
 ```
 
 Volcano plots visualize the outcome of one comparison between conditions for all the pro-
-teins, and combines the information on statistical and practical significance. The y-axis displays
-the FDR-adjusted p-values on the negative log2 scale, and represents statistical significance.
-The horizontal dashed line represents the FDR cutoff. The points above the FDR cutoff line
-are statistically significant differentially abundant proteins. These points are colored in red for
-upregulated proteins, and in blue for downregulated proteins. The x-axis is the model-based
-estimate of log-fold change (the base of logarithm transform is the same as specified in the
-logTrans option of the dataProcess step), and represents practical significance. It is possible
-to specify a practical significance cutoff based on the estimate of fold change in addition to
-the statistical significance cutoff. If the fold change cutoff is specified, the points above the
-horizontal cutoff line but within the vertical cutoff line will be judged as not differentially
-abundant (and will be colored in black). The practical significance cutoff can only be applied
-in addition to the statistical significance cutoff (i.e. the fold change alone does not present
-enough evidence for differential abundance).
+teins, and combines the information on statistical and practical significance. The y-axis displays the FDR-adjusted p-values on the negative log2 scale, and represents statistical significance. The horizontal dashed line represents the FDR cutoff. The points above the FDR cutoff line are statistically significant differentially abundant proteins. These points are colored in red for upregulated proteins, and in blue for downregulated proteins. The x-axis is the model-based estimate of log-fold change (the base of logarithm transform is the same as specified in the logTrans option of the dataProcess step), and represents practical significance. It is possible to specify a practical significance cutoff based on the estimate of fold change in addition to the statistical significance cutoff. If the fold change cutoff is specified, the points above the
+horizontal cutoff line but within the vertical cutoff line will be judged as not differentially abundant (and will be colored in black). The practical significance cutoff can only be applied in addition to the statistical significance cutoff (i.e. the fold change alone does not present enough evidence for differential abundance).
 
 ```{r, eval=F}
 groupComparisonPlots(data = DDA2009.comparisons$ComparisonResult, type = 'VolcanoPlot')
@@ -338,14 +327,14 @@ raw<-newraw
 # now 'raw' is ready to use MSstats
 ```
 
-### 2. different option for dataProcess
-Only different options in `dataProcess` you should use for Skyline output are `skylineReport=TRUE` (remove `Truncated=TRUE` rows and handle intensity=0) and `censoredInt="0"`(use intensity=0 as censored to handle missing values).
+### 2. Options for Skyline in dataProcess
+The options in `dataProcess` you should be careful for Skyline output are `skylineReport=TRUE` (remove `Truncated=TRUE` rows and handle intensity=0) and `censoredInt="0"`(use intensity=0 as censored to handle missing values and in this case, NA values are assumed as random missing).
 
 ***
 
 # Convert MaxQuant output to MSstats required input
 
-If you have MaxQuant output, please follow this section. Here controlled mixture data with dynamic range bench mark (Cox, 2014 in MCP) is used to demonstrate.
+If you have MaxQuant output, please follow this section. Here controlled mixture data with dynamic range bench mark (Cox, 2014 in MCP) is used to demonstrate. This dataset is available in [MSstats material github](https://github.com/MeenaChoi/MSstats_material) in the folder named 'example dataset/DDA_controlledMixture20014'.
 
 ### 1. First, get protein ID information
 ```{r, eval=T}
