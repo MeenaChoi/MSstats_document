@@ -217,7 +217,7 @@ getwd()
 
 # 4. DDA analysis with MSstats
 
-This section describes a typical workflow for DDA analysis with `MSstats`. Controlled mixture DDA data will be used for demonstration. This dataset (RawData.DDA.csv) is available in [MSstats material github](https://github.com/MeenaChoi/MSstats_material) in the folder named 'example dataset/DDA_controlledMixture2009'. It is processed by Superhirn. [original reference link](http://prottools.ethz.ch/muellelu/web/Latin_Square_Data.php)
+This section describes a typical workflow for DDA analysis with `MSstats`. Controlled mixture DDA data will be used for demonstration. This dataset (RawData.DDA.csv) is available in [MSstats material GitHub](https://github.com/MeenaChoi/MSstats_material) in the folder named 'example dataset/DDA_controlledMixture2009'. It is processed by Superhirn. [original reference link](http://prottools.ethz.ch/muellelu/web/Latin_Square_Data.php)
 
 ## 4.1 Preparing the data for MSstats input
 
@@ -457,19 +457,20 @@ groupComparisonPlots(data = DDA2009.comparisons$ComparisonResult, type = 'Heatma
 
 
 
-# 5. Convert skyline output to MSstats required format
+# 5. Convert Skyline output to MSstats required format
 
-If you use Skyline output, please follow this section. The same original raw dataset from previous section is used, but it is processed by Skyline. 
+This section describes steps and considerations to properly format data processed by Skyline, prior to the `MSstats` analysis. In the following example, the same raw dataset from the previous section is used, but it is processed by Skyline. 
 
 ## 5.1 Preparing the data for MSstats input
-Let's read the data.
+
+As in the previous example, we first load and access the dataset processed by Skyline:
 
 ```{r, eval=T}
 raw <- read.csv(file = "ControlMixerMSstatsInputfromskyline.csv")
 head(raw)
 ```
 
-The raw data (input data for MSstats) is required to contain variable of `ProteinName`, `PeptideSequence`, `PrecursorCharge`, `FragmentIon`, `ProductCharge`, `IsotopeLabelType`, `Condition`, `BioReplicate`, `Run`, `Intensity`. The variable names should be fixed. MSstats input from Skyline adapts the column scheme of the dataset so that it fits MSstats input format. However you should change `FileName` to `Run` and `Area` to `Intensity`.
+The input data for `MSstats` is required to contain variables of `ProteinName`, `PeptideSequence`, `PrecursorCharge`, `FragmentIon`, `ProductCharge`, `IsotopeLabelType`, `Condition`, `BioReplicate`, `Run`, `Intensity`. These variable names should be fixed. `MSstats` input from Skyline adapts the column scheme of the dataset so that it fits `MSstats` input format. However two column names need to be changed: from `FileName` to `Run` and from `Area` to `Intensity`.
 
 ```{r, eval=T}
 colnames(raw)[9] <- 'Run' 
@@ -477,7 +478,7 @@ colnames(raw)[10] <- 'Intensity'
 head(raw)
 ```
 
-The difference between output from Skyline and other spectral processing tool is that Skyline can distinguish random missing (NA) and censored missing (zero). The output from Skyline can have NA (expect small number of NAs or none of them) and 0 (zero). Then, we can use zero values in intensity are censored.
+The difference between output from Skyline and other spectral processing tool is that Skyline distinguishes random missing (`NA`) and censored missing (zero). The output from Skyline can have `NA` (expect small number of `NA`'s or none of them) and 0 (zero). Thus, we can use zero values in `Intensity` as censored.
 
 ```{r, eval=T}
 sum(is.na(raw$Intensity))
@@ -487,7 +488,7 @@ sum(raw$Intensity==0)
 
 ### 5.2 Preprocessing with DDA experiment from Skyline output
 
-The output from Skyline for DDA experiment needs one extra step before using MSstats. It has several peak area from the monoisotopic, M+1 and M+2 peaks. To get a robust measure of peptide intensity, we can sum per peptide or use highest peak per peptide. Here we will sum per peptide.
+The output from Skyline for DDA experiment needs one extra step before using `MSstats`. It has several measurements of peak area from the monoisotopic, M+1 and M+2 peaks. To get a robust measure of peptide intensity, we can sum over isotopic peaks per peptide or use the highest peak. Here we take a summation per peptide.
 
 ```{r, eval=T}
 library(reshape2)
@@ -516,14 +517,13 @@ raw<-newraw
 
 
 ### 5.3 Different options for Skyline in dataProcess
-Additional options in `dataProcess` need to be specified for processing Skyline output are `skylineReport=TRUE` (remove `Truncated=TRUE` rows and handle intensity=0) and `censoredInt="0"` (use intensity=0 as censored to handle missing values and in this case, NA values are assumed as random missing).
+Additional options in `dataProcess` that need to be specified for processing Skyline output are `skylineReport=TRUE` (to remove `Truncated=TRUE` rows and handle intensity=0) and `censoredInt="0"` (to use intensity=0 as censored to handle missing values and in this case, `NA` values are assumed as random missing).
 
 
-***
 
 # 6. Convert MaxQuant output to MSstats required input
 
-If you have MaxQuant output, please follow this section. Here controlled mixture data with dynamic range benchmark (Cox, 2014 in MCP) is used to demonstrate. This dataset is available in [MSstats material github](https://github.com/MeenaChoi/MSstats_material) in the folder named 'example dataset/DDA_controlledMixture20014'.
+The following R code chunks show steps to format a MaxQuant output for analysis by `MSstats`. Here a controlled mixture dataset with dynamic range benchmark (Cox, 2014 in MCP) is used for demonstration. This dataset is available in [MSstats material GitHub](https://github.com/MeenaChoi/MSstats_material) under the folder named 'example dataset/DDA_controlledMixture20014'.
 
 
 ```{r, eval=T}
