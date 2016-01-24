@@ -41,6 +41,7 @@ DDA2009.linear <- dataProcess(raw = DDA2009.superhirn,
 DDA2009.linear.censored <- dataProcess(raw = DDA2009.superhirn,
                                        summaryMethod = "linear", censoredInt = "NA")
 
+
 dataProcessPlots(data = DDA2009.TMP, type="QCplot", ylimUp=35)
 
 dataProcessPlots(data = DDA2009.TMP, type="QCplot", ylimUp=35,
@@ -54,15 +55,20 @@ dataProcessPlots(data = DDA2009.TMP.random, type="Profileplot",  ylimUp=35,
                  originalPlot=FALSE, summaryPlot=TRUE, address="DDA2009_TMP_random_")
 
 
-# accerated failure model with left-censored. NA intensities are assumed as censored
-DDA2009.feature.selection <- dataProcess(raw = DDA2009.superhirn,
-                                       summaryMethod = "TMP", censoredInt = "NA",
-                                       featureSubset = "highQuality")
+# select features
+DDA2009.TMP.featureselection <- dataProcess(raw = DDA2009.superhirn,  fillIncompleteRows = TRUE,
+                                            normalization = 'equalizeMedians',
+                                            featureSubset = 'highQuality',
+                                            remove_proteins_with_interference = FALSE,
+                                            summaryMethod = 'TMP',
+                                            censoredInt = "NA", cutoffCensored = "minFeature",
+                                            MBimpute = TRUE)
 
-dataProcessPlots(data = DDA2009.TMP, type="QCplot", ylimUp=35, address="DDA2009_feature_selection_")
+
+dataProcessPlots(data = DDA2009.TMP.featureselection, type="QCplot", ylimUp=35, address="DDA2009_feature_selection_")
 
 
-dataProcessPlots(data = DDA2009.TMP, type="Profileplot",  ylimUp=35,
+dataProcessPlots(data = DDA2009.TMP.featureselection, type="Profileplot",  ylimUp=35,
                  featureName="NA", width=7, height=7, address="DDA2009_feature_selection_1_")
 
 
